@@ -685,12 +685,24 @@ const PAGE_HTML = `<!doctype html>
         letter-spacing: -0.06em;
       }
       .cell .value.occupied {
-        color: rgba(24, 28, 36, 0.46);
-        text-decoration: line-through;
-        text-decoration-thickness: 2px;
+        display: none;
+      }
+      .cell[data-owner="1"] .value,
+      .cell[data-owner="2"] .value {
+        display: none;
       }
       .disc {
-        display: none;
+        position: absolute;
+        inset: 27%;
+        border-radius: 4px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.22), 0 2px 7px rgba(0, 0, 0, 0.26);
+        z-index: 2;
+      }
+      .disc.black {
+        background: #1b1f28;
+      }
+      .disc.white {
+        background: #d7dfe9;
       }
       .selection {
         box-shadow: inset 0 0 0 2px rgba(126, 165, 255, 0.95), 0 0 0 5px rgba(188, 212, 255, 0.45), 0 18px 28px rgba(110, 130, 194, 0.2);
@@ -720,6 +732,9 @@ const PAGE_HTML = `<!doctype html>
       }
       .selection-end::after {
         background: #c896eb;
+      }
+      .hint-target {
+        box-shadow: inset 0 0 0 2px rgba(24, 174, 104, 0.95), 0 0 0 5px rgba(94, 211, 144, 0.35), 0 10px 16px rgba(48, 128, 76, 0.22);
       }
       .board-actions {
         display: flex;
@@ -796,6 +811,7 @@ const PAGE_HTML = `<!doctype html>
           <button id="joinBtn">방 입장</button>
           <button id="createBtn" class="btn-primary">방 만들기</button>
           <button id="copyBtn">링크 복사</button>
+          <button id="hintBtn" type="button">힌트</button>
         </div>
       </div>
 
@@ -849,11 +865,16 @@ const PAGE_HTML = `<!doctype html>
       let state = null;
       let start = null;
       let end = null;
+      let hintRect = null;
+      let hintRects = [];
+      let hintIndex = 0;
+      let hintLockedSeat = null;
 
       const roomInput = document.getElementById("roomId");
       const joinBtn = document.getElementById("joinBtn");
       const createBtn = document.getElementById("createBtn");
       const copyBtn = document.getElementById("copyBtn");
+      const hintBtn = document.getElementById("hintBtn");
       const skipBtn = document.getElementById("skipBtn");
       const restartBtn = document.getElementById("restartBtn");
       const clearBtn = document.getElementById("clearBtn");
@@ -904,9 +925,35 @@ const PAGE_HTML = `<!doctype html>
 
       skipBtn.addEventListener("click", () => send({ type: "skip" }));
       restartBtn.addEventListener("click", () => send({ type: "restart" }));
+      hintBtn.addEventListener("click", () => {
+        if (!state || state.status !== "playing") return;
+        if (!seat || Number(state.turn) !== Number(seat)) return;
+        if (!state.board || state.board.length === 0) return;
+
+        if (!hintRect || hintLockedSeat !== seat) {
+          hintRects = collectHintRects(state.board, seat);
+          hintIndex = 0;
+          hintLockedSeat = seat;
+        }
+
+        if (hintRects.length === 0) {
+          hintRect = null;
+          hint.textContent = "현재는 10이 되는 직사각형이 없습니다.";
+          hintBtn.textContent = "힌트";
+          renderBoard();
+          return;
+        }
+
+        hintRect = hintRects[hintIndex % hintRects.length];
+        hintIndex += 1;
+        hintBtn.textContent = hintRects.length > 1 ? "다음 힌트" : "힌트 적용 중";
+        hint.textContent = "힌트: 합이 10 되는 직사각형 후보입니다. 다시 누르면 다음 후보로 이동합니다.";
+        renderBoard();
+      });
       clearBtn.addEventListener("click", () => {
         start = null;
         end = null;
+        clearHints();
         hint.textContent = "선택이 취소됐습니다. 첫 번째 점 더블클릭하세요.";
         renderBoard();
       });
@@ -921,6 +968,7 @@ const PAGE_HTML = `<!doctype html>
           return;
         }
         send({ type: "move", x1: start.x, y1: start.y, x2: end.x, y2: end.y });
+        clearHints();
         start = null;
         end = null;
       }
@@ -959,6 +1007,14 @@ const PAGE_HTML = `<!doctype html>
           statusBox.textContent = "연결이 끊겼습니다.";
           if (socket === ws) socket = null;
         };
+      }
+
+      function clearHints() {
+        hintRect = null;
+        hintRects = [];
+        hintIndex = 0;
+        hintLockedSeat = null;
+        if (hintBtn) hintBtn.textContent = "힌트";
       }
 
       function send(payload) {
@@ -1003,6 +1059,9 @@ const PAGE_HTML = `<!doctype html>
             if (isCellInCurrentSelection(x, y)) {
               cell.classList.add("selection");
             }
+            if (isCellInHintSelection(x, y)) {
+              cell.classList.add("hint-target");
+            }
             if (start && x === start.x && y === start.y) {
               cell.classList.add("selection-start");
               cell.classList.add("selection");
@@ -1017,6 +1076,7 @@ const PAGE_HTML = `<!doctype html>
               cell.addEventListener("dblclick", (evt) => {
                 evt.preventDefault();
                 if (!start) {
+                  clearHints();
                   start = { x, y };
                   hint.textContent = "첫 점이 선택됐습니다. 같은 방식으로 두 번째 점을 더블클릭해 주세요.";
                   renderBoard();
@@ -1062,10 +1122,17 @@ const PAGE_HTML = `<!doctype html>
             : state.turn === 2 ? "현재 턴" : "대기";
         scoreCard1.classList.toggle("active", state.status === "playing" && Number(state.turn) === 1);
         scoreCard2.classList.toggle("active", state.status === "playing" && Number(state.turn) === 2);
+        if (state.status !== "playing" || Number(state.turn) !== Number(seat)) {
+          clearHints();
+        }
 
         skipBtn.disabled = !showSkip;
         skipBtn.classList.toggle("btn-disabled", skipBtn.disabled);
         restartBtn.disabled = false;
+        if (hintBtn) {
+          hintBtn.disabled = !showSkip;
+          hintBtn.classList.toggle("btn-disabled", !showSkip);
+        }
       }
 
       boardEl.addEventListener("pointerleave", () => {
@@ -1084,6 +1151,29 @@ const PAGE_HTML = `<!doctype html>
         const y1 = Math.min(start.y, end.y);
         const y2 = Math.max(start.y, end.y);
         return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+      }
+
+      function isCellInHintSelection(x, y) {
+        if (!hintRect) return false;
+        return x >= hintRect.x1 && x <= hintRect.x2 && y >= hintRect.y1 && y <= hintRect.y2;
+      }
+
+      function collectHintRects(board, player) {
+        const rects = [];
+        for (let y1 = 0; y1 < BOARD_HEIGHT; y1++) {
+          for (let x1 = 0; x1 < BOARD_WIDTH; x1++) {
+            for (let y2 = y1; y2 < BOARD_HEIGHT; y2++) {
+              for (let x2 = x1; x2 < BOARD_WIDTH; x2++) {
+                const placement = validateSelection(board, player, x1, y1, x2, y2);
+                if (placement.ok) {
+                  rects.push({ x1, y1, x2, y2, cells: placement.cells });
+                  if (rects.length >= 8) return rects;
+                }
+              }
+            }
+          }
+        }
+        return rects;
       }
 
       function log(message) {
