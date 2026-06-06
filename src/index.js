@@ -367,13 +367,20 @@ const PAGE_HTML = `<!doctype html>
     <title>합쳐서10 직사각형 대전</title>
     <style>
       :root {
-        --bg: #f6f7f9;
-        --panel: #ffffff;
-        --line: #d8dbe0;
-        --text: #1f2933;
-        --board: #0f6f0f;
-        --black: #141414;
-        --white: #f6f6f3;
+        --panel: rgba(255, 255, 255, 0.84);
+        --panel-strong: #ffffff;
+        --line: #e7eaf2;
+        --line-strong: #d7ddea;
+        --text: #14161c;
+        --muted: #6c7483;
+        --shadow: 0 18px 42px rgba(70, 79, 104, 0.12);
+        --p1: #b7dbff;
+        --p1-strong: #7ab7f2;
+        --p2: #edccff;
+        --p2-strong: #c896eb;
+        --accent: #625cf3;
+        --empty-top: #ffe6a8;
+        --empty-bottom: #fff9ef;
       }
       * { box-sizing: border-box; }
       html, body {
@@ -381,246 +388,456 @@ const PAGE_HTML = `<!doctype html>
         padding: 0;
       }
       body {
-        font-family: "Pretendard", "Apple SD Gothic Neo", Arial, sans-serif;
-        background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+        min-height: 100vh;
+        font-family: "Avenir Next", "SUIT", "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(188, 218, 255, 0.55), transparent 30%),
+          radial-gradient(circle at top right, rgba(244, 210, 255, 0.48), transparent 28%),
+          linear-gradient(180deg, #ffffff 0%, #f5f6fb 100%);
         color: var(--text);
       }
       .wrap {
-        max-width: 1180px;
+        max-width: 1560px;
         margin: 0 auto;
-        padding: 16px;
+        padding: 28px 24px 36px;
       }
-      h1 { margin: 0 0 8px; }
+      .hero {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .eyebrow {
+        display: inline-flex;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(225, 229, 239, 0.85);
+        box-shadow: 0 10px 28px rgba(108, 116, 131, 0.08);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #6c6ff2;
+      }
+      h1 {
+        margin: 14px 0 10px;
+        font-size: clamp(36px, 5vw, 56px);
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+      }
+      .rule-copy {
+        max-width: 820px;
+        margin: 0 auto;
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--muted);
+      }
       .panel {
         background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 24px;
+        padding: 16px 18px;
+        margin-bottom: 24px;
       }
       .row {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
+        justify-content: center;
       }
       input, button {
         font: inherit;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 8px 10px;
+      }
+      input {
+        min-width: 200px;
+        border: 1px solid var(--line-strong);
+        border-radius: 16px;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--text);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
       button {
-        background: #fff;
+        border: 0;
+        border-radius: 16px;
+        padding: 14px 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        background: #ffffff;
+        color: var(--text);
+        box-shadow: 0 12px 24px rgba(109, 117, 133, 0.12);
+        cursor: pointer;
+        transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
       }
-      button:hover { background: #f8fafc; }
-      .btn-primary { background: #2563eb; color: #fff; border-color: #1e3a8a; }
-      .btn-danger { background: #b91c1c; color: #fff; border-color: #7f1d1d; }
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 28px rgba(109, 117, 133, 0.18);
+      }
+      button:disabled {
+        pointer-events: none;
+      }
+      .btn-primary {
+        background: linear-gradient(180deg, #736cf7 0%, #5a55e8 100%);
+        color: #fff;
+      }
+      .action-btn {
+        min-width: 122px;
+      }
       .btn-disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+      .arena {
+        display: grid;
+        grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(180px, 220px);
+        gap: 28px;
+        align-items: start;
+      }
+      .player-side {
+        border-radius: 32px;
+        padding: 18px 16px 22px;
+        text-align: center;
+        width: 100%;
+      }
+      .avatar-frame {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        max-width: 190px;
+        margin: 0 auto 18px;
+        border-radius: 28px;
+        display: grid;
+        place-items: center;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 18px 35px rgba(107, 116, 131, 0.14);
+      }
+      .player-one .avatar-frame {
+        background: linear-gradient(180deg, #c7dcff 0%, #93baf0 100%);
+      }
+      .player-two .avatar-frame {
+        background: linear-gradient(180deg, #f7dcff 0%, #dfb5fb 100%);
+      }
+      .avatar-badge {
+        width: 92px;
+        height: 92px;
+        border-radius: 30px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 10px 22px rgba(67, 73, 90, 0.16);
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+      .player-label {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+      .score-value {
+        font-size: clamp(72px, 8vw, 108px);
+        line-height: 1;
+        font-weight: 300;
+        letter-spacing: -0.07em;
+        margin: 14px 0 10px;
+      }
+      .player-one .score-value {
+        color: #93bfea;
+      }
+      .player-two .score-value {
+        color: #c69be5;
+      }
+      .score-meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .score-divider {
+        margin-top: 10px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(215, 221, 234, 0.95);
+        font-size: 13px;
+        font-weight: 700;
+        color: #4b5563;
+      }
+      .score-card.active {
+        transform: translateY(-4px);
+        box-shadow: 0 26px 40px rgba(89, 96, 124, 0.16);
+      }
+      .player-one.active {
+        outline: 3px solid rgba(122, 183, 242, 0.34);
+      }
+      .player-two.active {
+        outline: 3px solid rgba(200, 150, 235, 0.34);
+      }
+      .board-stage {
+        border-radius: 34px;
+        padding: 22px;
+      }
+      .board-stage-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px 14px;
+        margin-bottom: 12px;
+      }
+      .status-box {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: rgba(98, 92, 243, 0.08);
+        color: #4440c8;
+        font-weight: 700;
+        white-space: normal;
+      }
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .hint {
+        margin-bottom: 16px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 247, 252, 0.98) 100%);
+        border: 1px solid rgba(228, 234, 242, 0.95);
+        color: #44657e;
+        font-size: 14px;
       }
       .board-wrap {
         overflow-x: auto;
+        border-radius: 28px;
+        padding: 18px;
+        background: var(--panel-strong);
+        border: 1px solid #edf0f6;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 16px 28px rgba(106, 113, 129, 0.08);
       }
       #board {
         display: grid;
-        grid-template-columns: repeat(17, minmax(28px, 1fr));
-        gap: 4px;
-        width: min(1060px, 100%);
-        margin: 10px auto 0;
+        grid-template-columns: repeat(17, minmax(42px, 1fr));
+        gap: 8px;
+        width: min(100%, 980px);
+        margin: 0 auto;
       }
       .cell {
         position: relative;
         aspect-ratio: 1 / 1;
-        border: 1px solid #1c4a1c;
-        border-radius: 6px;
-        background: #0f6f0f;
+        border-radius: 18px;
+        border: 1px solid #e5ccb0;
+        background: linear-gradient(180deg, var(--empty-top) 0%, var(--empty-bottom) 48%, #fffaf2 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         user-select: none;
+        overflow: hidden;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 10px rgba(181, 147, 114, 0.18);
       }
-      .cell .value {
-        position: absolute;
-        top: 3px;
-        left: 4px;
-        font-size: 13px;
-        color: #f4fff7;
-        font-weight: 900;
-        opacity: 1;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.48), 0 0 8px rgba(0, 0, 0, 0.15);
-        letter-spacing: 0.02em;
-      }
-      .cell .value.occupied {
-        color: rgba(247, 250, 252, 0.45);
-        text-decoration: line-through;
-        text-decoration-thickness: 2px;
-        opacity: 0.85;
-      }
-      .cell .value.occupied::after {
-        content: "※";
-        margin-left: 2px;
-        font-size: 8px;
-        opacity: 0.8;
-      }
-      .disc {
-        width: 82%;
-        height: 82%;
-        border-radius: 9999px;
-        box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.35);
-      }
-      .disc.black { background: var(--black); }
-      .disc.white { background: var(--white); }
-      .selection {
-        background: rgba(250, 204, 21, 0.2) !important;
-        box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.92), 0 0 0 3px rgba(250, 204, 21, 0.35), 0 0 18px rgba(250, 204, 21, 0.5);
-        z-index: 1;
-        outline: 2px solid rgba(217, 119, 6, 0.95);
-        outline-offset: -2px;
-      }
-      .selection-start,
-      .selection-end {
-        position: relative;
-      }
-      .selection-start::before,
-      .selection-end::before {
+      .cell::before {
         content: "";
         position: absolute;
-        width: 12px;
-        height: 12px;
-        border: 2px solid #fff;
-        border-radius: 50%;
-        inset: 3px;
-        margin: auto;
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
-        z-index: 2;
+        inset: 0;
+        border-radius: inherit;
+        background:
+          radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.92) 0 12%, transparent 13%),
+          radial-gradient(circle at 74% 76%, rgba(206, 163, 119, 0.18) 0 7%, transparent 8%);
+        pointer-events: none;
       }
-      .selection-start::before {
-        background: #22c55e;
+      .cell.interactive {
+        cursor: pointer;
+        transition: transform 140ms ease, box-shadow 140ms ease;
       }
-      .selection-end::before {
-        background: #3b82f6;
+      .cell.interactive:hover {
+        transform: translateY(-1px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 18px rgba(181, 147, 114, 0.24);
       }
+      .cell[data-owner="1"] {
+        border-color: #9ec6e8;
+        background: linear-gradient(180deg, #deefff 0%, #b8dcff 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 20px rgba(122, 183, 242, 0.22);
       }
-      .status-box {
-        min-height: 36px;
-        white-space: pre-line;
+      .cell[data-owner="2"] {
+        border-color: #d7b5eb;
+        background: linear-gradient(180deg, #f8e8ff 0%, #e8cbff 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 20px rgba(200, 150, 235, 0.22);
       }
-      .score-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+      .cell[data-owner="1"]::before,
+      .cell[data-owner="2"]::before {
+        background:
+          radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.55) 0 10%, transparent 11%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
       }
-      .score-card {
-        border: 1px solid #dbe2ea;
-        border-radius: 10px;
-        padding: 10px 12px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      .cell .value {
         position: relative;
+        z-index: 2;
+        font-size: clamp(18px, 2vw, 22px);
+        color: #111318;
+        font-weight: 900;
+        letter-spacing: -0.06em;
       }
-      .score-card.active {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+      .cell .value.occupied {
+        color: rgba(24, 28, 36, 0.46);
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
       }
-      .score-card .name-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-weight: 700;
-        font-size: 14px;
-        margin-bottom: 6px;
+      .disc {
+        display: none;
       }
-      .score-disk {
-        width: 14px;
-        height: 14px;
-        border-radius: 999px;
-        border: 1px solid rgba(0, 0, 0, 0.2);
+      .selection {
+        box-shadow: inset 0 0 0 2px rgba(126, 165, 255, 0.95), 0 0 0 5px rgba(188, 212, 255, 0.45), 0 18px 28px rgba(110, 130, 194, 0.2);
       }
-      .score-disk.black { background: #141414; }
-      .score-disk.white {
-        background: #f5f5f2;
-        border-color: rgba(0, 0, 0, 0.35);
-      }
-      .score-value {
-        font-size: 28px;
+      .selection-start::after,
+      .selection-end::after {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        z-index: 3;
+        font-size: 11px;
         font-weight: 800;
-        margin: 4px 0 2px;
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(38, 49, 70, 0.18);
       }
-      .score-meta {
-        font-size: 12px;
-        color: #64748b;
+      .selection-start::after {
+        content: "1";
+        background: #7ab7f2;
       }
-      .score-divider {
-        margin-top: 6px;
-        border-top: 1px dashed #e2e8f0;
-        padding-top: 6px;
-        color: #475569;
-        font-size: 12px;
+      .selection-end::after {
+        content: "2";
       }
-      .small { font-size: 13px; color: #475569; }
-      .hint { font-size: 13px; color: #0f766e; }
+      .selection-end::after {
+        background: #c896eb;
+      }
+      .board-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .logs-panel {
+        margin-top: 22px;
+        border-radius: 24px;
+        padding: 16px 18px;
+      }
       .logs {
-        max-height: 120px;
+        max-height: 140px;
         overflow: auto;
-        border: 1px dashed var(--line);
-        background: #f8fafc;
-        padding: 8px;
+        margin-top: 10px;
+        border-radius: 16px;
+        border: 1px solid #edf0f6;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 12px;
+        color: #566074;
+      }
+      @media (max-width: 1200px) {
+        .arena {
+          grid-template-columns: 1fr;
+        }
+        .player-side {
+          max-width: 420px;
+          margin: 0 auto;
+        }
+      }
+      @media (max-width: 720px) {
+        .wrap {
+          padding: 18px 14px 28px;
+        }
+        .toolbar {
+          border-radius: 20px;
+        }
+        input {
+          min-width: 0;
+          width: 100%;
+        }
+        .board-stage {
+          padding: 16px;
+        }
+        .board-wrap {
+          padding: 12px;
+        }
+        #board {
+          gap: 6px;
+        }
+        .cell {
+          border-radius: 14px;
+        }
+        .board-stage-head {
+          flex-direction: column;
+          align-items: stretch;
+        }
       }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>합쳐서10 직사각형 대전</h1>
-        <p class="small">규칙: 더블클릭으로 두 점을 지정해서 직사각형을 만들고, 직사각형 안에서 <strong>현재 비어있는 칸</strong>의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
+      <div class="hero">
+        <div class="eyebrow">Realtime PvP Board</div>
+        <h1>Two-player Mode</h1>
+        <p class="rule-copy">규칙: 더블클릭으로 두 점을 지정해서 직사각형을 만들고, 직사각형 안에서 <strong>현재 비어있는 칸</strong>의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
+      </div>
 
-      <div class="panel">
+      <div class="toolbar panel">
         <div class="row">
           <input id="roomId" placeholder="예: game123" />
           <button id="joinBtn">방 입장</button>
           <button id="createBtn" class="btn-primary">방 만들기</button>
           <button id="copyBtn">링크 복사</button>
         </div>
-        <div class="row" style="margin-top: 8px;">
-          <button id="skipBtn">패스</button>
-          <button id="restartBtn" class="btn-primary">다시 시작</button>
-          <button id="clearBtn" type="button">선택 취소</button>
-        </div>
       </div>
 
-      <div class="panel">
-        <div class="status-box" id="status">준비 중...</div>
-        <div class="small" id="scoreBoard"></div>
-        <div class="score-grid">
-          <div class="score-card" id="scoreCard1">
-            <div class="name-row">
-              <span class="score-disk black"></span>
-              <span>Player 1</span>
-            </div>
-            <div class="score-value" id="scoreValue1">0</div>
-            <div class="score-meta" id="scoreMeta1">연결: -, 돌: 0개</div>
-            <div class="score-divider" id="scoreTurn1">대기</div>
+      <div class="arena">
+        <aside class="panel score-card player-side player-one" id="scoreCard1">
+          <div class="avatar-frame">
+            <div class="avatar-badge">1P</div>
           </div>
-          <div class="score-card" id="scoreCard2">
-            <div class="name-row">
-              <span class="score-disk white"></span>
-              <span>Player 2</span>
-            </div>
-            <div class="score-value" id="scoreValue2">0</div>
-            <div class="score-meta" id="scoreMeta2">연결: -, 돌: 0개</div>
-            <div class="score-divider" id="scoreTurn2">대기</div>
+          <div class="player-label">First Player</div>
+          <div class="score-value" id="scoreValue1">0</div>
+          <div class="score-meta" id="scoreMeta1">연결: -, 돌: 0개</div>
+          <div class="score-divider" id="scoreTurn1">대기</div>
+        </aside>
+
+        <main class="panel board-stage">
+          <div class="board-stage-head">
+            <div class="status-box" id="status">준비 중...</div>
+            <div class="small" id="scoreBoard"></div>
           </div>
-        </div>
-        <div id="hint" class="hint">더블클릭으로 점을 2번 눌러 직사각형을 지정하세요.</div>
+          <div id="hint" class="hint">더블클릭으로 점을 2번 눌러 직사각형을 지정하세요.</div>
+          <div class="board-wrap">
+            <div id="board"></div>
+          </div>
+          <div class="board-actions">
+            <button id="skipBtn" class="action-btn">패스</button>
+            <button id="restartBtn" class="btn-primary action-btn">다시 시작</button>
+            <button id="clearBtn" class="action-btn" type="button">선택 취소</button>
+          </div>
+        </main>
+
+        <aside class="panel score-card player-side player-two" id="scoreCard2">
+          <div class="avatar-frame">
+            <div class="avatar-badge">2P</div>
+          </div>
+          <div class="player-label">Second Player</div>
+          <div class="score-value" id="scoreValue2">0</div>
+          <div class="score-meta" id="scoreMeta2">연결: -, 돌: 0개</div>
+          <div class="score-divider" id="scoreTurn2">대기</div>
+        </aside>
       </div>
 
-      <div class="panel">
-        <div class="board-wrap">
-          <div id="board"></div>
-        </div>
-      </div>
-
-      <div class="panel">
+      <div class="panel logs-panel">
         <div class="small">이벤트 로그</div>
         <div class="logs" id="log"></div>
       </div>
@@ -780,9 +997,7 @@ const PAGE_HTML = `<!doctype html>
               const disc = document.createElement("span");
               disc.className = owner === 1 ? "disc black" : "disc white";
               cell.appendChild(disc);
-              value.classList.add("owned");
-            } else {
-              value.classList.add("alive");
+              value.classList.add("occupied");
             }
 
             if (isCellInCurrentSelection(x, y)) {
@@ -798,6 +1013,7 @@ const PAGE_HTML = `<!doctype html>
             }
 
             if (isMyTurn && state.status === "playing") {
+              cell.classList.add("interactive");
               cell.addEventListener("dblclick", (evt) => {
                 evt.preventDefault();
                 if (!start) {
@@ -821,31 +1037,34 @@ const PAGE_HTML = `<!doctype html>
         const connected2 = state.connectedSeats["2"] ? "O" : "-";
         const p1 = state.scores["1"] || 0;
         const p2 = state.scores["2"] || 0;
-        const winnerText =
+        const statusText =
           state.status === "finished"
             ? state.winner === 0
-              ? "무승부"
-              : "승자: Player " + state.winner
+              ? "무승부로 게임이 종료됐습니다."
+              : "Player " + state.winner + " 승리로 게임이 종료됐습니다."
             : state.status === "waiting"
-              ? "상대 대기 중"
-              : "게임 진행 중";
+              ? "상대 연결을 기다리는 중입니다."
+              : "Player " + state.turn + "의 차례입니다.";
 
-        statusBox.textContent = "상태: " + winnerText + " / 현재 턴: Player " + state.turn;
-        scoreBoard.textContent =
-          "연결: P1 " + connected1 + ", P2 " + connected2 +
-          " / 점수(돌 개수): P1 " + p1 + " : P2 " + p2 +
-          " / 패스: " + state.skipCount;
+        statusBox.textContent = statusText;
+        scoreBoard.textContent = "P1 " + p1 + "칸 · P2 " + p2 + "칸 · 패스 " + state.skipCount;
         scoreValue1.textContent = String(p1);
         scoreValue2.textContent = String(p2);
-        scoreMeta1.textContent = "연결: " + connected1 + " / 돌: " + p1 + "개";
-        scoreMeta2.textContent = "연결: " + connected2 + " / 돌: " + p2 + "개";
-        scoreTurn1.textContent = state.turn === 1 ? "현재 턴" : "대기";
-        scoreTurn2.textContent = state.turn === 2 ? "현재 턴" : "대기";
-        scoreCard1.classList.toggle("active", Number(state.turn) === 1);
-        scoreCard2.classList.toggle("active", Number(state.turn) === 2);
+        scoreMeta1.textContent = (connected1 === "O" ? "연결됨" : "미연결") + " · 점유 " + p1 + "칸";
+        scoreMeta2.textContent = (connected2 === "O" ? "연결됨" : "미연결") + " · 점유 " + p2 + "칸";
+        scoreTurn1.textContent =
+          state.status === "finished"
+            ? state.winner === 1 ? "승리" : state.winner === 0 ? "무승부" : "패배"
+            : state.turn === 1 ? "현재 턴" : "대기";
+        scoreTurn2.textContent =
+          state.status === "finished"
+            ? state.winner === 2 ? "승리" : state.winner === 0 ? "무승부" : "패배"
+            : state.turn === 2 ? "현재 턴" : "대기";
+        scoreCard1.classList.toggle("active", state.status === "playing" && Number(state.turn) === 1);
+        scoreCard2.classList.toggle("active", state.status === "playing" && Number(state.turn) === 2);
 
         skipBtn.disabled = !showSkip;
-        skipBtn.className = skipBtn.disabled ? "btn-disabled" : "";
+        skipBtn.classList.toggle("btn-disabled", skipBtn.disabled);
         restartBtn.disabled = false;
       }
 
