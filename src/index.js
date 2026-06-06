@@ -531,7 +531,7 @@ const PAGE_HTML = `<!doctype html>
   <body>
     <div class="wrap">
       <h1>합쳐서10 직사각형 대전</h1>
-      <p class="small">규칙: 드래그로 직사각형을 만들고, 안의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
+        <p class="small">규칙: 더블클릭으로 두 점을 지정해서 직사각형을 만들고, 안의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
 
       <div class="panel">
         <div class="row">
@@ -589,7 +589,6 @@ const PAGE_HTML = `<!doctype html>
       let socket = null;
       let seat = null;
       let state = null;
-      let selecting = false;
       let start = null;
       let end = null;
 
@@ -648,25 +647,25 @@ const PAGE_HTML = `<!doctype html>
       skipBtn.addEventListener("click", () => send({ type: "skip" }));
       restartBtn.addEventListener("click", () => send({ type: "restart" }));
       clearBtn.addEventListener("click", () => {
-        selecting = false;
         start = null;
         end = null;
+        hint.textContent = "선택이 취소됐습니다. 첫 번째 점 더블클릭하세요.";
         renderBoard();
       });
 
-      boardEl.addEventListener("pointerup", () => {
-        if (!selecting || !start || !end) return;
+      function attemptMove() {
+        if (!start || !end) return;
         const isSingle = start.x === end.x && start.y === end.y;
-        if (!isSingle) {
-          send({ type: "move", x1: start.x, y1: start.y, x2: end.x, y2: end.y });
-        } else {
-          hint.textContent = "한 칸은 안됩니다. 직사각형은 최소 2칸 이상 드래그해 주세요.";
+        if (isSingle) {
+          hint.textContent = "한 칸은 안됩니다. 서로 다른 두 점을 더블클릭해 주세요.";
+          start = null;
+          end = null;
+          return;
         }
-        selecting = false;
+        send({ type: "move", x1: start.x, y1: start.y, x2: end.x, y2: end.y });
         start = null;
         end = null;
-        renderBoard();
-      });
+      }
 
       function connect(room) {
         if (socket) socket.close();
@@ -747,18 +746,17 @@ const PAGE_HTML = `<!doctype html>
             }
 
             if (isMyTurn && state.status === "playing") {
-              cell.addEventListener("pointerdown", (evt) => {
+              cell.addEventListener("dblclick", (evt) => {
                 evt.preventDefault();
-                selecting = true;
-                start = { x, y };
+                if (!start) {
+                  start = { x, y };
+                  hint.textContent = "첫 점이 선택됐습니다. 같은 방식으로 두 번째 점을 더블클릭해 주세요.";
+                  renderBoard();
+                  return;
+                }
+
                 end = { x, y };
-                hint.textContent = "드래그를 계속 이어서 직사각형을 만드세요.";
-                renderBoard();
-              });
-              cell.addEventListener("pointerenter", () => {
-                if (!selecting) return;
-                if (!start) return;
-                end = { x, y };
+                attemptMove();
                 renderBoard();
               });
             }
@@ -800,12 +798,11 @@ const PAGE_HTML = `<!doctype html>
       }
 
       boardEl.addEventListener("pointerleave", () => {
-        if (selecting) {
-          selecting = false;
+        if (start) {
           start = null;
           end = null;
+          hint.textContent = "선택이 취소됐어요. 첫 번째 점을 더블클릭하세요.";
           renderBoard();
-          hint.textContent = "선택이 취소됐어요. 다시 드래그해 주세요.";
         }
       });
 
