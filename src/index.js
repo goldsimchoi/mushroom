@@ -296,7 +296,7 @@ function validateSelection(board, player, x1, y1, x2, y2) {
   const rect = normalizeRect(x1, y1, x2, y2);
   if (!rect) return { ok: false, message: "직사각형 범위를 벗어났습니다." };
   if (rect.x1 === rect.x2 && rect.y1 === rect.y2) {
-    return { ok: false, message: "한 칸은 안돼요. 드래그해서 면적이 있는 직사각형을 만드세요." };
+    return { ok: false, message: "한 칸은 안돼요. 두 점을 더블클릭해 직사각형을 만드세요." };
   }
 
   let sum = 0;
@@ -304,7 +304,7 @@ function validateSelection(board, player, x1, y1, x2, y2) {
   for (let y = rect.y1; y <= rect.y2; y++) {
     for (let x = rect.x1; x <= rect.x2; x++) {
       const cell = board[y][x];
-      sum += cell.value;
+      sum += cell.owner === 0 ? cell.value : 0;
       cells.push([x, y]);
     }
   }
@@ -443,12 +443,26 @@ const PAGE_HTML = `<!doctype html>
       }
       .cell .value {
         position: absolute;
-        top: 2px;
-        left: 3px;
-        font-size: 10px;
-        color: #e8ffe7;
-        font-weight: 700;
-        opacity: 0.9;
+        top: 3px;
+        left: 4px;
+        font-size: 13px;
+        color: #f4fff7;
+        font-weight: 900;
+        opacity: 1;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.48), 0 0 8px rgba(0, 0, 0, 0.15);
+        letter-spacing: 0.02em;
+      }
+      .cell .value.occupied {
+        color: rgba(247, 250, 252, 0.45);
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+        opacity: 0.85;
+      }
+      .cell .value.occupied::after {
+        content: "※";
+        margin-left: 2px;
+        font-size: 8px;
+        opacity: 0.8;
       }
       .disc {
         width: 82%;
@@ -459,8 +473,35 @@ const PAGE_HTML = `<!doctype html>
       .disc.black { background: var(--black); }
       .disc.white { background: var(--white); }
       .selection {
-        outline: 2px solid rgba(37, 99, 235, 0.95);
+        background: rgba(250, 204, 21, 0.2) !important;
+        box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.92), 0 0 0 3px rgba(250, 204, 21, 0.35), 0 0 18px rgba(250, 204, 21, 0.5);
+        z-index: 1;
+        outline: 2px solid rgba(217, 119, 6, 0.95);
         outline-offset: -2px;
+      }
+      .selection-start,
+      .selection-end {
+        position: relative;
+      }
+      .selection-start::before,
+      .selection-end::before {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        inset: 3px;
+        margin: auto;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+        z-index: 2;
+      }
+      .selection-start::before {
+        background: #22c55e;
+      }
+      .selection-end::before {
+        background: #3b82f6;
+      }
       }
       .status-box {
         min-height: 36px;
@@ -531,7 +572,7 @@ const PAGE_HTML = `<!doctype html>
   <body>
     <div class="wrap">
       <h1>합쳐서10 직사각형 대전</h1>
-        <p class="small">규칙: 더블클릭으로 두 점을 지정해서 직사각형을 만들고, 안의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
+        <p class="small">규칙: 더블클릭으로 두 점을 지정해서 직사각형을 만들고, 직사각형 안에서 <strong>현재 비어있는 칸</strong>의 숫자 합이 10이면 그 칸을 모두 내 땅으로 바꿉니다.</p>
 
       <div class="panel">
         <div class="row">
@@ -570,7 +611,7 @@ const PAGE_HTML = `<!doctype html>
             <div class="score-divider" id="scoreTurn2">대기</div>
           </div>
         </div>
-        <div id="hint" class="hint">드래그로 직사각형을 선택하세요.</div>
+        <div id="hint" class="hint">더블클릭으로 점을 2번 눌러 직사각형을 지정하세요.</div>
       </div>
 
       <div class="panel">
@@ -739,9 +780,20 @@ const PAGE_HTML = `<!doctype html>
               const disc = document.createElement("span");
               disc.className = owner === 1 ? "disc black" : "disc white";
               cell.appendChild(disc);
+              value.classList.add("owned");
+            } else {
+              value.classList.add("alive");
             }
 
             if (isCellInCurrentSelection(x, y)) {
+              cell.classList.add("selection");
+            }
+            if (start && x === start.x && y === start.y) {
+              cell.classList.add("selection-start");
+              cell.classList.add("selection");
+            }
+            if (end && x === end.x && y === end.y) {
+              cell.classList.add("selection-end");
               cell.classList.add("selection");
             }
 
