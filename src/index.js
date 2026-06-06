@@ -639,6 +639,8 @@ const PAGE_HTML = `<!doctype html>
         align-items: center;
         justify-content: center;
         user-select: none;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
         overflow: hidden;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 10px rgba(181, 147, 114, 0.18);
       }
@@ -661,20 +663,24 @@ const PAGE_HTML = `<!doctype html>
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 18px rgba(181, 147, 114, 0.24);
       }
       .cell[data-owner="1"] {
-        border-color: #9ec6e8;
-        background: linear-gradient(180deg, #deefff 0%, #b8dcff 100%);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 20px rgba(122, 183, 242, 0.22);
+        border-color: #a8cbed;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.96) 0 9%, transparent 10%),
+          linear-gradient(180deg, #e7f4ff 0%, #bfdcff 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 5px 10px rgba(94, 142, 190, 0.18);
       }
       .cell[data-owner="2"] {
-        border-color: #d7b5eb;
-        background: linear-gradient(180deg, #f8e8ff 0%, #e8cbff 100%);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 10px 20px rgba(200, 150, 235, 0.22);
+        border-color: #d5b6ea;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.96) 0 9%, transparent 10%),
+          linear-gradient(180deg, #faedff 0%, #e6ccff 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 5px 10px rgba(157, 108, 189, 0.16);
       }
       .cell[data-owner="1"]::before,
       .cell[data-owner="2"]::before {
-        background:
-          radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.55) 0 10%, transparent 11%),
-          linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, transparent 100%);
+        background: radial-gradient(circle at 72% 78%, rgba(79, 91, 117, 0.13) 0 7%, transparent 8%);
       }
       .cell .value {
         position: relative;
@@ -693,16 +699,17 @@ const PAGE_HTML = `<!doctype html>
       }
       .disc {
         position: absolute;
-        inset: 27%;
-        border-radius: 4px;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.22), 0 2px 7px rgba(0, 0, 0, 0.26);
+        inset: 31%;
+        border-radius: 7px;
+        box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.08), 0 3px 7px rgba(23, 28, 38, 0.28);
         z-index: 2;
       }
       .disc.black {
-        background: #1b1f28;
+        background: linear-gradient(180deg, #252b36 0%, #111722 100%);
       }
       .disc.white {
-        background: #d7dfe9;
+        background: linear-gradient(180deg, #ffffff 0%, #dce5ee 100%);
+        border: 1px solid rgba(81, 91, 107, 0.14);
       }
       .selection {
         box-shadow: inset 0 0 0 2px rgba(126, 165, 255, 0.95), 0 0 0 5px rgba(188, 212, 255, 0.45), 0 18px 28px rgba(110, 130, 194, 0.2);
@@ -869,6 +876,8 @@ const PAGE_HTML = `<!doctype html>
       let hintRects = [];
       let hintIndex = 0;
       let hintLockedSeat = null;
+      let lastActivationTap = null;
+      const DOUBLE_TAP_MS = 520;
 
       const roomInput = document.getElementById("roomId");
       const joinBtn = document.getElementById("joinBtn");
@@ -973,6 +982,38 @@ const PAGE_HTML = `<!doctype html>
         end = null;
       }
 
+      function activateCell(x, y) {
+        if (!start) {
+          clearHints();
+          start = { x, y };
+          hint.textContent = "첫 점이 선택됐습니다. 두 번째 점을 같은 방식으로 두 번 눌러주세요.";
+          renderBoard();
+          return;
+        }
+
+        end = { x, y };
+        attemptMove();
+        renderBoard();
+      }
+
+      function handleCellPointerUp(x, y, evt) {
+        evt.preventDefault();
+        const now = performance.now();
+        const isRepeatTap =
+          lastActivationTap &&
+          lastActivationTap.x === x &&
+          lastActivationTap.y === y &&
+          now - lastActivationTap.time <= DOUBLE_TAP_MS;
+
+        if (isRepeatTap) {
+          lastActivationTap = null;
+          activateCell(x, y);
+          return;
+        }
+
+        lastActivationTap = { x, y, time: now };
+      }
+
       function connect(room) {
         if (socket) socket.close();
         const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -1014,6 +1055,7 @@ const PAGE_HTML = `<!doctype html>
         hintRects = [];
         hintIndex = 0;
         hintLockedSeat = null;
+        lastActivationTap = null;
         if (hintBtn) hintBtn.textContent = "힌트";
       }
 
@@ -1073,20 +1115,8 @@ const PAGE_HTML = `<!doctype html>
 
             if (isMyTurn && state.status === "playing") {
               cell.classList.add("interactive");
-              cell.addEventListener("dblclick", (evt) => {
-                evt.preventDefault();
-                if (!start) {
-                  clearHints();
-                  start = { x, y };
-                  hint.textContent = "첫 점이 선택됐습니다. 같은 방식으로 두 번째 점을 더블클릭해 주세요.";
-                  renderBoard();
-                  return;
-                }
-
-                end = { x, y };
-                attemptMove();
-                renderBoard();
-              });
+              cell.addEventListener("pointerup", (evt) => handleCellPointerUp(x, y, evt));
+              cell.addEventListener("dblclick", (evt) => evt.preventDefault());
             }
 
             boardEl.appendChild(cell);
@@ -1136,12 +1166,7 @@ const PAGE_HTML = `<!doctype html>
       }
 
       boardEl.addEventListener("pointerleave", () => {
-        if (start) {
-          start = null;
-          end = null;
-          hint.textContent = "선택이 취소됐어요. 첫 번째 점을 더블클릭하세요.";
-          renderBoard();
-        }
+        lastActivationTap = null;
       });
 
       function isCellInCurrentSelection(x, y) {
