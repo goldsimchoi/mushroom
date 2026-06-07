@@ -174,16 +174,12 @@ export class Room {
       ws.send(JSON.stringify({ type: "error", message: "내 차례가 아닙니다." }));
       return;
     }
-    if (hasAnyValidMove(this.state.board, seat)) {
-      ws.send(JSON.stringify({ type: "error", message: "둘 수 있는 직사각형이 있어요. 패스할 수 없습니다." }));
-      return;
-    }
 
     const next = seat === 1 ? 2 : 1;
     this.state.skipCount += 1;
     this.state.turn = next;
 
-    if (!hasAnyValidMove(this.state.board, seat) && !hasAnyValidMove(this.state.board, next)) {
+    if (this.state.skipCount >= 2) {
       finishState(this.state);
     } else {
       this.state.status = bothConnected(this.state) ? "playing" : "waiting";
