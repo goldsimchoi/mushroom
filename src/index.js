@@ -983,6 +983,16 @@ const PAGE_HTML = `<!doctype html>
       }
 
       function activateCell(x, y) {
+        const cell = state?.board?.[y]?.[x];
+        if (!cell || cell.owner !== 0) {
+          start = null;
+          end = null;
+          clearHints();
+          hint.textContent = "내 땅/상대 땅 칸은 시작/끝점으로 지정할 수 없습니다.";
+          renderBoard();
+          return;
+        }
+
         if (!start) {
           clearHints();
           start = { x, y };
@@ -996,8 +1006,10 @@ const PAGE_HTML = `<!doctype html>
         renderBoard();
       }
 
-      function handleCellPointerUp(x, y, evt) {
+      function handleCellPointerUp(x, y, owner, evt) {
         evt.preventDefault();
+        if (owner !== 0) return;
+
         const now = performance.now();
         const isRepeatTap =
           lastActivationTap &&
@@ -1114,10 +1126,13 @@ const PAGE_HTML = `<!doctype html>
             }
 
             if (isMyTurn && state.status === "playing") {
+            const isSelectable = owner === 0;
+            if (isSelectable) {
               cell.classList.add("interactive");
-              cell.addEventListener("pointerup", (evt) => handleCellPointerUp(x, y, evt));
+              cell.addEventListener("pointerup", (evt) => handleCellPointerUp(x, y, owner, evt));
               cell.addEventListener("dblclick", (evt) => evt.preventDefault());
             }
+          }
 
             boardEl.appendChild(cell);
           }
